@@ -1,56 +1,71 @@
-# Welcome to your Expo app 👋
+# Solace
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Solace is a React Native / Expo wellness companion prototype with mood check-ins, a gentle reflection chat, a breathing pause, and a weekly reflection view.
 
-## Get started
+## What’s included
 
-1. Install dependencies
+- **Expo Router mobile app:** Today and Your space tabs, mood and optional journal-note check-ins, an AI reflection chat, and a guided breathing pause.
+- **Guest browsing:** The Today homepage is available without an account. Sign in or create an account when opening check-ins, chat, breathing exercises, or private reflections.
+- **Accounts:** Sign up and sign in with an email and password. Passwords are hashed on the API, and signed-in sessions are revocable.
+- **Node.js API:** Express endpoints for authentication, check-ins, weekly reflections, and AI chat.
+- **MongoDB persistence:** Accounts, check-ins, and AI conversation turns are saved by the API. Check-ins and chat requests are scoped to the signed-in account.
+- **Private session storage:** Mobile session tokens use Expo SecureStore; browser sessions use per-tab session storage.
+- **AI companion:** The server calls the Gemini GenerateContent API. The provider key stays on the server and is never bundled into the app.
+- **Wellness guardrails:** The companion is not a therapist or diagnostic tool; the API responds to clear self-harm crisis language with crisis-support directions.
 
-   ```bash
-   npm install
-   ```
+## Run the API
 
-2. Start the app
+Requirements: Node.js 20+ and a reachable MongoDB instance. AI chat additionally needs a Gemini API key.
 
-   ```bash
-   npx expo start
-   ```
+In PowerShell:
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```powershell
+cd server
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
+npm install
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+Set `MONGODB_URI` in `server/.env`. The server binds to `0.0.0.0` in development so a phone on your local network can reach it. `AI_PROVIDER`, `AI_BASE_URL`, and `AI_MODEL` default to Gemini settings. Keep your Gemini key in `AI_API_KEY` in `server/.env`. To run only the API:
 
-### Other setup steps
+```powershell
+npm run dev
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+The API listens on port `4000`. Check that MongoDB is available and visit `http://localhost:4000/api/health` on the computer running the API.
 
-## Learn more
+Gemini uses the `generateContent` endpoint. If you intentionally use an OpenAI-compatible provider instead, set `AI_PROVIDER=openai-compatible` and configure its `AI_BASE_URL`, `AI_API_KEY`, and `AI_MODEL`. AI chat returns a configuration error until a provider key is set; it does not pretend an offline response came from AI.
 
-To learn more about developing your project with Expo, look at the following resources:
+## Run the app and API
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+After configuring `server/.env` as described above, run these commands from the project root. Install the API dependencies once from its directory, then return to the project root. This starts the API and Expo together in the current terminal, so Expo can display its QR code and accept keyboard shortcuts such as `a`; press Ctrl+C to stop both.
 
-## Join the community
+```powershell
+npm install
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
+if (!(Test-Path server\.env)) { Copy-Item server\.env.example server\.env }
+cd server
+npm install
+cd ..
+npm start
+```
 
-Join our community of developers creating universal apps.
+The API-only command is `npm run dev` from the `server` directory.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+The checked-in app `.env.example` uses `http://10.226.209.111:4000/api` for the API. On web, this configured address is automatically replaced with `http://localhost:4000/api`. For a physical phone, use your computer’s current LAN IP in `EXPO_PUBLIC_API_URL`; keep both devices on the same network and allow port 4000 through the computer’s firewall if prompted. Restart Expo after changing `.env`.
+
+Sign-up, sign-in, check-ins, and reflections require the API and MongoDB to be reachable. AI chat additionally requires a valid Gemini `AI_API_KEY` in `server/.env`; without it, the API returns a configuration error rather than an AI reply.
+
+## API
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/health` | API and MongoDB readiness |
+| `POST` | `/api/auth/signup` | Create an account and sign in |
+| `POST` | `/api/auth/login` | Sign in to an existing account |
+| `GET` | `/api/auth/me` | Get the current signed-in account |
+| `POST` | `/api/auth/logout` | Revoke the current session |
+| `POST` | `/api/check-ins` | Save a mood and optional note (authentication required) |
+| `GET` | `/api/insights` | Recent check-ins and last-week counts (authentication required) |
+| `POST` | `/api/chat` | Get and persist an AI companion response (authentication required) |
+
+This is a hackathon prototype. It does not yet include email verification, password recovery, account deletion, or production privacy/retention safeguards. Use disposable development data and do not deploy it publicly with real sensitive reflections until those safeguards are in place. The companion is for general wellness, not medical or emergency care.

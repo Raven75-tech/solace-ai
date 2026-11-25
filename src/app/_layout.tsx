@@ -1,18 +1,45 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import { Stack } from 'expo-router';
+import { ActivityIndicator, Modal, StyleSheet, View } from 'react-native';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+import AuthScreen from '@/components/auth-screen';
+import { AuthProvider, useAuth } from '@/contexts/auth-context';
 
-SplashScreen.preventAutoHideAsync();
+function RootNavigator() {
+  const { loading, authRequested, authError, cancelAuth } = useAuth();
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  if (loading) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator color="#375A48" />
+      </View>
+    );
+  }
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="profile" />
+      </Stack>
+      <Modal
+        animationType="slide"
+        onRequestClose={cancelAuth}
+        presentationStyle="fullScreen"
+        visible={authRequested}>
+        <AuthScreen onCancel={cancelAuth} sessionError={authError} />
+      </Modal>
+    </>
   );
 }
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <RootNavigator />
+    </AuthProvider>
+  );
+}
+
+const styles = StyleSheet.create({
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F6F5F0' },
+});
